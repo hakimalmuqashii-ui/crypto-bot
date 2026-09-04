@@ -5,11 +5,15 @@ import requests
 import pandas as pd
 import http.server
 import socketserver
+from google import genai
 
 # ==================== الإعدادات والمفاتيح ====================
-TELEGRAM_BOT_TOKEN = "8937828285:AAEaGxVmUo3xCtliBjr2wi2cBnHSQifRavs"
-TELEGRAM_CHAT_ID = "-1004315599153"
+TELEGRAM_BOT_TOKEN = "ضع_هنا_توكن_البوت"
+TELEGRAM_CHAT_ID = "ضع_هنا_معرف_القناة_أو_الحساب"
 GEMINI_API_KEY = "AQ.Ab8RN6IACsXJVeiy-6JrmZrf2cPZzJVoXDAwpANN7yFFrZVAew"
+
+# تهيئة عميل Gemini الرسمي الجديد
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 # العملات المستهدفة بالتحليل
 SYMBOLS = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT"]
@@ -41,7 +45,7 @@ def send_telegram_message(message: str):
         print(f"خطأ في إرسال التليجرام: {e}")
 
 def get_binance_klines(symbol: str, interval: str = "15m", limit: int = 100):
-    """جلب بيانات الشموع العامة من بينانس"""
+    """جلب بيانات الشموع من بينانس"""
     url = "https://api.binance.com/api/v3/klines"
     params = {"symbol": symbol, "interval": interval, "limit": limit}
     response = requests.get(url, params=params, timeout=10)
@@ -77,7 +81,7 @@ def calculate_indicators(df: pd.DataFrame):
     }
 
 def analyze_market_with_ai(market_data: dict):
-    """صياغة التحليل الفني عبر استدعاء مباشر لـ Gemini REST API"""
+    """صياغة التحليل الفني عبر Interactions API الرسمية الجديدة"""
     prompt = f"""
     أنت محلل فني خبير في التداول الفوري (Spot) على بينانس مع التركيز على إدارة المخاطر الصارمة.
     البيانات اللحظية المحدثة للعملات:
@@ -91,30 +95,14 @@ def analyze_market_with_ai(market_data: dict):
        - أرقام أمر OCO بالتفصيل: سعر جني الربح (Price)، سعر التنبيه (Stop)، وسعر الوقف (Limit).
     4. إذا كان هناك تشبع شرائي أو خطورة، انصح بعدم الشراء واذكر السبب الفني بإيجاز.
     """
-    
-    # استدعاء مباشر عبر REST API يحل مشكلة نوع المفتاح تلقائياً
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-    headers = {
-        "Content-Type": "application/json",
-        "x-goog-api-key": GEMINI_API_KEY
-    }
-    payload = {
-        "contents": [
-            {
-                "parts": [{"text": prompt}]
-            }
-        ]
-    }
-    
     try:
-        response = requests.post(url, json=payload, headers=headers, timeout=30)
-        if response.status_code == 200:
-            result = response.json()
-            return result["candidates"][0]["content"]["parts"][0]["text"]
-        else:
-            return f"خطأ من سيرفر الذكاء الاصطناعي ({response.status_code}): {response.text}"
+        interaction = client.interactions.create(
+            model="gemini-2.5-flash",
+            input=prompt
+        )
+        return interaction.output_text
     except Exception as e:
-        return f"حدث خطأ أثناء الاتصال بالذكاء الاصطناعي: {e}"
+        return f"حدث خطأ أثناء تحليل الذكاء الاصطناعي: {e}"
 
 def run_scanner():
     """تنفيذ فحص العملات وإرسال النتيجة"""
