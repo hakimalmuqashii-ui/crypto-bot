@@ -8,9 +8,9 @@ import socketserver
 from google import genai
 
 # ==================== الإعدادات والمفاتيح ====================
-TELEGRAM_BOT_TOKEN = "ضع_هنا_توكن_البوت"
-TELEGRAM_CHAT_ID = "ضع_هنا_معرف_القناة_أو_الحساب"
-GEMINI_API_KEY = "AQ.Ab8RN6IACsXJVeiy-6JrmZrf2cPZzJVoXDAwpANN7yFFrZVAew"
+TELEGRAM_BOT_TOKEN = "8937828285:AAEaGxVmUo3xCtliBjr2wi2cBnHSQifRavs"
+TELEGRAM_CHAT_ID = "-1004315599153"
+GEMINI_API_KEY = "AQ.Ab8RN6KN-O_ceA7cVEf7QsQvMjaYAj1Xvr2LZWqLjG_IOekLAA"
 
 # تهيئة عميل Gemini الرسمي الجديد
 client = genai.Client(api_key=GEMINI_API_KEY)
