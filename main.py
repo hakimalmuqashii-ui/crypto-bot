@@ -97,7 +97,7 @@ def analyze_market_with_ai(market_data: dict):
     """
     try:
         interaction = client.interactions.create(
-            model="gemini-2.5-flash",
+            model="gemini-3.6-flash",
             input=prompt
         )
         return interaction.output_text
