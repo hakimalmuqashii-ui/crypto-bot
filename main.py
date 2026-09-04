@@ -5,20 +5,14 @@ import requests
 import pandas as pd
 import http.server
 import socketserver
-import google.generativeai as genai
 
 # ==================== الإعدادات والمفاتيح ====================
-# استبدل القيم الثلاث أدناه ببياناتك الخاصة
 TELEGRAM_BOT_TOKEN = "8937828285:AAEaGxVmUo3xCtliBjr2wi2cBnHSQifRavs"
 TELEGRAM_CHAT_ID = "-1004315599153"
 GEMINI_API_KEY = "AQ.Ab8RN6IACsXJVeiy-6JrmZrf2cPZzJVoXDAwpANN7yFFrZVAew"
 
 # العملات المستهدفة بالتحليل
 SYMBOLS = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT"]
-
-# إعداد نموذج الذكاء الاصطناعي
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel("gemini-1.5-flash")
 
 # خادم ويب مدمج لتلبية متطلبات منصة Render
 PORT = int(os.environ.get("PORT", 8080))
@@ -83,7 +77,7 @@ def calculate_indicators(df: pd.DataFrame):
     }
 
 def analyze_market_with_ai(market_data: dict):
-    """صياغة التحليل الفني والتوصيات عبر Gemini"""
+    """صياغة التحليل الفني عبر استدعاء مباشر لـ Gemini REST API"""
     prompt = f"""
     أنت محلل فني خبير في التداول الفوري (Spot) على بينانس مع التركيز على إدارة المخاطر الصارمة.
     البيانات اللحظية المحدثة للعملات:
@@ -97,11 +91,30 @@ def analyze_market_with_ai(market_data: dict):
        - أرقام أمر OCO بالتفصيل: سعر جني الربح (Price)، سعر التنبيه (Stop)، وسعر الوقف (Limit).
     4. إذا كان هناك تشبع شرائي أو خطورة، انصح بعدم الشراء واذكر السبب الفني بإيجاز.
     """
+    
+    # استدعاء مباشر عبر REST API يحل مشكلة نوع المفتاح تلقائياً
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    headers = {
+        "Content-Type": "application/json",
+        "x-goog-api-key": GEMINI_API_KEY
+    }
+    payload = {
+        "contents": [
+            {
+                "parts": [{"text": prompt}]
+            }
+        ]
+    }
+    
     try:
-        response = model.generate_content(prompt)
-        return response.text
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
+        if response.status_code == 200:
+            result = response.json()
+            return result["candidates"][0]["content"]["parts"][0]["text"]
+        else:
+            return f"خطأ من سيرفر الذكاء الاصطناعي ({response.status_code}): {response.text}"
     except Exception as e:
-        return f"حدث خطأ أثناء تحليل الذكاء الاصطناعي: {e}"
+        return f"حدث خطأ أثناء الاتصال بالذكاء الاصطناعي: {e}"
 
 def run_scanner():
     """تنفيذ فحص العملات وإرسال النتيجة"""
@@ -117,15 +130,14 @@ def run_scanner():
     send_telegram_message(analysis_report)
 
 if __name__ == "__main__":
-    # تشغيل خادم الويب على منفذ Render
     web_thread = threading.Thread(target=start_background_web_server, daemon=True)
     web_thread.start()
     
-    # فحص أولي مباشر
+    # فحص أولي فوري
     run_scanner()
     
-    # فحص دوري كل 30 دقيقة
+    # تكرار الفحص كل 30 دقيقة
     while True:
         time.sleep(1800)
         run_scanner()
-      
+        
